@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: actionlens
+      POSTGRES_USER: actionlens
+      POSTGRES_PASSWORD: actionlens-local
+    volumes:
+      - actionlens_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U actionlens -d actionlens"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  api:
+    build: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://actionlens:actionlens-local@db:5432/actionlens
+      STORAGE_DIR: /srv/actionlens/storage
+    ports:
+      - "8000:8000"
+    volumes:
+      - actionlens_files:/srv/actionlens/storage
+    depends_on:
+      db:
+        condition: service_healthy
+  web:
+    build: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+volumes:
+  actionlens_pg:
+  actionlens_files:
